@@ -49,6 +49,7 @@
 #include "n64.h"
 #include "TASRun.h"
 #include "stm32f4xx_it.h"
+#include "serial_interface.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -117,6 +118,9 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
+
+  serial_interface_reset();
+  serial_interface_set_output_function(CDC_Transmit_FS);
 
   /* USER CODE END SysInit */
 

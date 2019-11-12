@@ -192,68 +192,71 @@ void TASRunSetConsole(int numRun, Console console)
 	tasruns[numRun].console = console;
 }
 
-void ExtractDataAndAdvance(RunData (rd)[MAX_CONTROLLERS][MAX_DATA_LANES], int index, uint8_t* Buf, int *byteNum)
+uint32_t GetSizeOfControllerDataForConsole(int console_type)
 {
-	uint8_t bytesPerInput = 0;
-	uint8_t numControllers = tasruns[index].numControllers;
-	uint8_t numDataLanes = tasruns[index].numDataLanes;
-
-	memset(rd, 0, sizeof(RunData[MAX_CONTROLLERS][MAX_DATA_LANES])); // prepare the data container
-
-	switch(tasruns[index].console)
-	{
+	switch (console_type) {
 		case CONSOLE_N64:
-			bytesPerInput = sizeof(N64ControllerData);
-			break;
-		case CONSOLE_SNES:
-			bytesPerInput = sizeof(SNESControllerData);
-			break;
-		case CONSOLE_NES:
-			bytesPerInput = sizeof(NESControllerData);
-			break;
-		case CONSOLE_GC:
-			bytesPerInput = sizeof(GCControllerData);
-			break;
-		default: // should never reach this
-			break;
+		return sizeof(N64ControllerData);
+		break;
+	case CONSOLE_SNES:
+		return sizeof(SNESControllerData);
+		break;
+	case CONSOLE_NES:
+		return sizeof(NESControllerData);
+		break;
+	case CONSOLE_GC:
+		return sizeof(GCControllerData) ;
+		break;
 	}
-
-	for(int x = 0;x < numControllers;x++)
-	{
-		for(int y = 0;y < numDataLanes;y++)
-		{
-			memcpy(&rd[x][y], &(Buf[(*byteNum)]), bytesPerInput); // copy only what is necessary
-			(*byteNum) += bytesPerInput; // advance the index only what is necessary
-		}
-	}
-
-	(*byteNum)--; // back up 1 since the main loop will advance it one
+	return 0; // should never reach this
 }
 
-uint8_t AddFrame(int runIndex, RunData (frame)[MAX_CONTROLLERS][MAX_DATA_LANES])
+uint32_t GetSizeOfInputForRun(int run_index)
 {
-	// first check buffer isn't full
-	if(tasruns[runIndex].size == MAX_SIZE)
+	return tasruns[run_index].numControllers * tasruns[run_index].numDataLanes * GetSizeOfControllerDataForConsole(tasruns[run_index].console);
+}
+
+int ExtractDataAndAddFrame(int run_index, uint8_t *buffer, uint32_t n)
+{
+	size_t bytesPerInput = GetSizeOfControllerDataForConsole(tasruns[run_index].console);
+	uint8_t numControllers = tasruns[run_index].numControllers;
+	uint8_t numDataLanes = tasruns[run_index].numDataLanes;
+
+	RunData frame[MAX_CONTROLLERS][MAX_DATA_LANES];
+
+	if(tasruns[run_index].size == MAX_SIZE)
 	{
 		return 0;
 	}
 
-	memcpy((RunData*)tasruns[runIndex].buf,frame,sizeof(RunData[MAX_CONTROLLERS][MAX_DATA_LANES]));
+	memset(frame, 0, sizeof(frame)); // prepare the data container
+
+	uint8_t *buffer_position = buffer;
+	for(int x = 0;x < numControllers;x++)
+	{
+		for(int y = 0;y < numDataLanes;y++)
+		{
+			memcpy(&frame[x][y], buffer_position, bytesPerInput); // copy only what is necessary
+			buffer_position += bytesPerInput; // advance the index only what is necessary
+		}
+	}
+
+	memcpy((RunData*)tasruns[run_index].buf,frame,sizeof(frame));
 
 	// NOTE: These two pointer modifications must occur in an atomic fashion
 	//       A poorly-timed interrupt could cause bad things.
 	__disable_irq();
 	// loop around if necessary
-	if(tasruns[runIndex].buf != tasruns[runIndex].end)
+	if(tasruns[run_index].buf != tasruns[run_index].end)
 	{
-		(tasruns[runIndex].buf)++;
+		(tasruns[run_index].buf)++;
 	}
 	else // buf is at end, so wrap around to beginning
 	{
-		tasruns[runIndex].buf = tasruns[runIndex].runData;
+		tasruns[run_index].buf = tasruns[run_index].runData;
 	}
 
-	tasruns[runIndex].size++;
+	tasruns[run_index].size++;
 	__enable_irq();
 
 	return 1;
