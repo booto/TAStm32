@@ -41,6 +41,7 @@
 #include "n64.h"
 #include "TASRun.h"
 #include "usbd_cdc_if.h"
+#include "serial_interface.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -148,6 +149,7 @@ extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim6;
 extern TIM_HandleTypeDef htim7;
+extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 extern volatile uint8_t request_pending;
 extern volatile uint8_t bulk_mode;
@@ -355,7 +357,7 @@ void EXTI1_IRQHandler(void)
 			{
 				if(!request_pending && TASRunGetSize(0) <= (MAX_SIZE-28)) // not full enough
 				{
-					if(CDC_Transmit_FS((uint8_t*)"a", 1) == USBD_OK) // notify that we latched and want more
+					if(serial_interface_output((uint8_t*)"a", 1) == USBD_OK) // notify that we latched and want more
 					{
 						request_pending = 1;
 					}
@@ -363,7 +365,7 @@ void EXTI1_IRQHandler(void)
 			}
 			else
 			{
-				CDC_Transmit_FS((uint8_t*)"A", 1); // notify that we latched
+				serial_interface_output((uint8_t*)"A", 1); // notify that we latched
 			}
 		}
 		else
@@ -437,7 +439,7 @@ void EXTI4_IRQHandler(void)
 	my_wait_us_asm(2); // wait a small amount of time before replying
 
 	//-------- SEND RESPONSE
-	SetN64OutputMode();
+	//SetN64OutputMode();
 
 	switch(cmd)
 	{
@@ -498,7 +500,7 @@ void EXTI4_IRQHandler(void)
 	}
 	//-------- DONE SENDING RESPOSE
 
-	SetN64InputMode();
+	//SetN64InputMode();
 
 	__enable_irq();
 
@@ -508,10 +510,10 @@ void EXTI4_IRQHandler(void)
 		case 0x400302: // GC poll
 		case 0x400300: // GC poll
 		case 0x400301: // GC poll
-			CDC_Transmit_FS((uint8_t*)"A", 1);
+			serial_interface_output((uint8_t*)"A", 1);
 
 			if(frame == NULL) // there was a buffer underflow
-				CDC_Transmit_FS((uint8_t*)"\xB2", 1);
+				serial_interface_output((uint8_t*)"\xB2", 1);
 		break;
 	}
 
@@ -563,6 +565,20 @@ void TIM3_IRQHandler(void)
   /* USER CODE BEGIN TIM3_IRQn 1 */
 
   /* USER CODE END TIM3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART2 global interrupt.
+  */
+void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&huart2);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+
+  /* USER CODE END USART2_IRQn 1 */
 }
 
 /**
