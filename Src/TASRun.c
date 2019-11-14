@@ -262,18 +262,25 @@ int ExtractDataAndAddFrame(int run_index, uint8_t *buffer, uint32_t n)
 	return 1;
 }
 
+
+
 void SetN64InputMode()
 {
 	// port C4 to input mode
-	GPIOC->MODER &= ~(1 << 9);
-	GPIOC->MODER &= ~(1 << 8);
+	const uint32_t MODER_SLOT = (P1_DATA_2_Pin*P1_DATA_2_Pin);
+	const uint32_t MODER_MASK = 0b11 * MODER_SLOT;
+	const uint32_t MODER_NEW_VALUE = GPIO_MODE_INPUT * MODER_SLOT;
+
+	P1_DATA_2_GPIO_Port->MODER = (P1_DATA_2_GPIO_Port->MODER & ~MODER_MASK) | MODER_NEW_VALUE;
 }
 
 void SetN64OutputMode()
 {
+	const uint32_t MODER_SLOT = (P1_DATA_2_Pin*P1_DATA_2_Pin);
+	const uint32_t MODER_MASK = 0b11 * MODER_SLOT;
+	const uint32_t MODER_NEW_VALUE = GPIO_MODE_OUTPUT_PP * MODER_SLOT;
 	// port C4 to output mode
-	GPIOC->MODER &= ~(1 << 9);
-	GPIOC->MODER |= (1 << 8);
+	P1_DATA_2_GPIO_Port->MODER = (P1_DATA_2_GPIO_Port->MODER & ~MODER_MASK) | MODER_NEW_VALUE;
 }
 
 void SetN64Mode()
@@ -284,7 +291,7 @@ void SetN64Mode()
 	GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 
-	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+	HAL_GPIO_Init(P1_DATA_2_GPIO_Port, &GPIO_InitStruct);
 }
 
 void SetSNESMode()
