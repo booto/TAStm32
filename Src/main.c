@@ -103,6 +103,7 @@ static uint8_t input;
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   if (huart == &huart2) {
+	  serial_interface_set_output_function(UART2_OutputFunction);
 	  serial_interface_consume(input);
 	  HAL_UART_Receive_IT(&huart2, &input, 1);
   }
@@ -135,9 +136,6 @@ int main(void)
   /* USER CODE BEGIN SysInit */
 
   serial_interface_reset();
-  //serial_interface_set_output_function(CDC_Transmit_FS);
-  serial_interface_set_output_function(UART2_OutputFunction);
-
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
